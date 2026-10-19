@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>جوجه فراری 🐥</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#bde9ff;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:Arial,sans-serif}
+#game{width:900px;height:450px;max-width:95%;position:relative;overflow:hidden;background:linear-gradient(#80d8ff,#eafaff);border:4px solid #222;border-radius:15px;transition:background 3s ease}
+#score{position:absolute;top:15px;right:20px;font-size:20px;font-weight:bold;z-index:10}
+#best{position:absolute;top:45px;right:20px;font-size:17px;z-index:10}
+#distance{position:absolute;top:15px;left:20px;background:#ffffffe6;padding:10px 15px;border-radius:12px;font-size:18px;font-weight:bold;z-index:10}
+#ground{position:absolute;bottom:0;width:100%;height:55px;background:#72b447;border-top:5px solid #4c8530;z-index:6;transition:background 3s ease}
+#weather{position:absolute;inset:0;z-index:1;pointer-events:none;transition:opacity 2s ease;font-size:28px;overflow:hidden}
+#weatherText{position:absolute;top:82px;left:50%;transform:translateX(-50%);padding:5px 12px;border-radius:14px;background:#ffffffaa;font-size:15px;font-weight:bold;opacity:.75;z-index:7;transition:opacity 1s ease}
+.weatherParticle{position:absolute;animation:weatherFall linear infinite;opacity:.7}
+.rainDrop{position:absolute;width:3px;height:22px;border-radius:3px;background:rgba(225,245,255,.9);animation:rainFall linear infinite;box-shadow:0 0 3px rgba(255,255,255,.45)}
+@keyframes weatherFall{from{transform:translateY(-60px)}to{transform:translateY(520px)}}
+@keyframes rainFall{from{transform:translateY(-60px)}to{transform:translateY(520px)}}
+#chicken{position:absolute;left:110px;bottom:55px;font-size:55px;width:65px;height:65px;z-index:5}
+#cat{position:absolute;left:20px;bottom:55px;font-size:56px;width:66px;height:66px;z-index:4;filter:drop-shadow(0 8px 5px rgba(0,0,0,.25));font-family:"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif;line-height:1}
+#cat{transform:scaleX(-1);transform-origin:center;}
+#obstacle{position:absolute;bottom:55px;left:950px;font-size:50px;width:max-content;min-width:50px;height:60px;z-index:3;white-space:nowrap}
+#coinPickup{position:absolute;bottom:55px;left:-120px;width:48px;height:48px;z-index:4;font-size:42px;line-height:48px;text-align:center;filter:drop-shadow(0 5px 4px rgba(0,0,0,.3));display:none;animation:coinBob .55s ease-in-out infinite alternate}
+@keyframes coinBob{from{transform:translateY(0) rotate(-5deg)}to{transform:translateY(-7px) rotate(5deg)}}
+#distanceMarker{position:absolute;bottom:125px;left:950px;z-index:8;display:flex;flex-direction:column;align-items:center;font-size:18px;font-weight:bold;pointer-events:none;text-shadow:0 1px 2px #fff}
+#distanceMarker span{font-size:15px;background:#fff;padding:3px 8px;border-radius:8px;white-space:nowrap}
+#message{position:absolute;width:100%;text-align:center;top:50%;transform:translateY(-50%);font-size:30px;font-weight:bold;z-index:20;text-shadow:0 2px 5px #fff;pointer-events:auto}
+button{margin-top:15px;padding:10px 25px;font-size:18px;border:none;border-radius:10px;background:#222;color:white;cursor:pointer}
+
+#menu{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:20px 10px;background:radial-gradient(circle at 50% 25%,#ffe58a 0 7%,transparent 8%),linear-gradient(135deg,#152238,#27496d 55%,#0e1726);color:white;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px}
+#menu h1{margin:0 0 4px;font-size:36px;text-shadow:0 3px 8px #000}
+#creator{font-size:17px;letter-spacing:3px;opacity:1;margin-bottom:1px;text-shadow:0 2px 5px #000}
+#groupName{font-size:13px;letter-spacing:4px;font-weight:bold;opacity:.9;margin-bottom:5px;text-shadow:0 2px 4px #000}
+#coinRow{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;min-height:34px;margin:2px auto}
+#coins{font-size:20px;font-weight:bold}
+#rewardToast{padding:4px 9px;border-radius:10px;background:#ffd54a;color:#222;font-weight:bold;font-size:16px;opacity:0;pointer-events:none;white-space:nowrap}
+#characters{display:flex;flex-direction:column;gap:10px;margin:8px 0;width:min(260px,90%);padding:4px 2px;overflow:visible}
+.character{width:100%;min-height:88px;padding:10px 5px;border:3px solid #aaa;border-radius:14px;background:white;font-size:16px;cursor:pointer}
+.character .emoji{display:block;font-size:42px;margin-bottom:4px}
+.character.selected{border-color:#222;background:#e8f7ff}
+.character.locked{opacity:.7}
+#startGame{padding:12px 35px;font-size:20px;border:0;border-radius:12px;background:#222;color:#fff;cursor:pointer}
+#shopMsg{height:22px;font-size:15px}
+#missions{width:min(330px,92%);margin:8px 0;padding:12px;border:2px solid #ffffff55;border-radius:16px;background:#00000035;text-align:center}
+#missions h3{margin:0 0 8px;font-size:20px}
+.mission{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:7px 0;padding:8px;border-radius:12px;background:#ffffff18}
+.missionText{font-size:14px;text-align:right;line-height:1.4}
+.rewardBoxes{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.rewardBox{width:44px;height:44px;margin:0;padding:0;border-radius:10px;background:#8b4a20;border:2px solid #ffd35a;font-size:25px;cursor:pointer;box-shadow:0 3px 8px #0005}
+.rewardBox.locked{opacity:.45;filter:grayscale(.7);cursor:not-allowed}
+.rewardBox.claimed{background:#555;border-color:#aaa;cursor:default;font-size:20px}
+#missionStatus{font-size:13px;opacity:.9;margin-top:7px}
+#rewardToast.show{animation:rewardToast 2s ease-out forwards}
+@keyframes rewardToast{0%{opacity:0;transform:translateX(-6px) scale(.8)}12%{opacity:1;transform:translateX(0) scale(1.08)}85%{opacity:1;transform:translateX(0) scale(1)}100%{opacity:0;transform:translateX(5px) scale(1)}}
+.scoreBurst{position:absolute;left:50%;top:68px;transform:translateX(-50%);font-size:28px;font-weight:900;color:#ffcc00;text-shadow:0 2px 4px #000;z-index:25;pointer-events:none;animation:scoreBurst .8s ease-out forwards}
+.scoreBurst::after{content:"✦  ✧  ✦  ✧  ✦";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:18px;color:#fff;animation:burstSpark .8s ease-out forwards}
+@keyframes scoreBurst{0%{opacity:0;transform:translateX(-50%) scale(.5)}35%{opacity:1;transform:translateX(-50%) scale(1.25)}100%{opacity:0;transform:translateX(-50%) translateY(-35px) scale(1)}}
+@keyframes burstSpark{0%{opacity:0;transform:translate(-50%,-50%) scale(.2)}35%{opacity:1;transform:translate(-50%,-50%) scale(1.4)}100%{opacity:0;transform:translate(-50%,-80%) scale(2)}}
+
+#backgroundBirds{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .8s ease}
+#game.birdsActive #backgroundBirds{opacity:.9}
+.bgBird{position:absolute;left:-80px;font-size:30px;filter:drop-shadow(0 2px 2px #0003);animation:birdFly linear infinite;will-change:transform}
+.bgBird.b1{top:80px;font-size:27px;animation-duration:16s;animation-delay:-3s}
+.bgBird.b2{top:135px;font-size:34px;animation-duration:21s;animation-delay:-10s}
+.bgBird.b3{top:55px;font-size:24px;animation-duration:18s;animation-delay:-7s}
+@keyframes birdFly{0%{transform:translateX(-90px) translateY(0) scaleX(1)}25%{transform:translateX(25vw) translateY(-10px) scaleX(1)}50%{transform:translateX(50vw) translateY(8px) scaleX(-1)}75%{transform:translateX(75vw) translateY(-6px) scaleX(-1)}100%{transform:translateX(calc(100vw + 160px)) translateY(0) scaleX(1)}}
+
+
+/* Gameplay characters face right */
+#chicken{transform:scaleX(-1);}
+#cat{transform:scaleX(-1);}
+</style>
+</head>
+<body>
+<div id="game">
+<div id="menu">
+  <h1>🐥 جوجه فراری</h1>
+  <div id="creator"><strong>AMIR GAME</strong></div>
+  <div id="groupName">A.Z</div>
+  <div id="coinRow"><div id="coins">🪙 سکه: 0</div><div id="rewardToast">+0 سکه</div></div>
+  <div id="menuButtons">
+    <button id="startGame">شروع بازی</button>
+    <button id="showCharacters">🐾 شخصیت‌های بازی</button>
+  </div>
+  <div id="missions">
+    <h3>🎁 مأموریت‌های روزانه</h3>
+    <div class="mission"><div class="missionText">۳ بازی در روز<br>🎁 یک جعبه</div><div class="rewardBoxes"><button class="rewardBox locked" data-mission="3">🎁</button></div></div>
+    <div class="mission"><div class="missionText">۴ بازی در روز<br>🎁 یک جعبه</div><div class="rewardBoxes"><button class="rewardBox locked" data-mission="4">🎁</button></div></div>
+    <div class="mission"><div class="missionText">۶ بازی در روز<br>🎁 دو جعبه</div><div class="rewardBoxes"><button class="rewardBox locked" data-mission="6a">🎁</button><button class="rewardBox locked" data-mission="6b">🎁</button></div></div>
+    <div id="missionStatus">امروز ۰ بازی انجام داده‌ای</div>
+  </div>
+  <div id="charactersPanel">
+  <div>شخصیتت رو انتخاب کن:</div>
+  <div id="characters">
+    <button class="character selected" data-character="chicken">
+      <span class="emoji">🐥</span>جوجه<br>رایگان
+    </button>
+    <button class="character locked" data-character="mouse">
+      <span class="emoji">🐭</span>موش<br>🪙 5 سکه
+    </button>
+    <button class="character locked" data-character="squirrel">
+      <span class="emoji">🐿️</span>سنجاب<br>🪙 10 سکه
+    </button>
+    <button class="character locked" data-character="fox">
+      <span class="emoji">🦊</span>روباه<br>🪙 15 سکه
+    </button>
+    <button class="character locked" data-character="panda">
+      <span class="emoji">🐼</span>پاندا<br>🪙 25 سکه
+    </button>
+    <button class="character locked" data-character="lion">
+      <span class="emoji">🦁</span>شیر<br>🪙 40 سکه
+    </button>
+    <button class="character locked" data-character="penguin">
+      <span class="emoji">🐧</span>پنگوئن<br>🪙 60 سکه
+    </button>
+    <button class="character locked" data-character="dragon">
+      <span class="emoji">🐲</span>اژدها<br>🪙 100 سکه
+    </button>
+  </div>
+  <div id="shopMsg"></div>
+  <button id="closeCharacters">بستن شخصیت‌ها</button>
+  </div>
+</div>
+
+<div id="weather"></div>
+<div id="backgroundBirds"><span class="bgBird b1">🐦</span><span class="bgBird b2">🕊️</span><span class="bgBird b3">🐦</span></div>
+<div id="weatherText">☀️ آفتابی</div>
+<div id="score">امتیاز: 0</div>
+<div id="best">رکورد: 0</div>
+<div id="distance">📦 جعبه بعدی: 95 متر</div>
+<div id="message">🐥 جوجه فراری<br><button id="start">شروع بازی</button></div>
+<div id="chicken">🐥</div>
+<div id="cat">🐈</div>
+<div id="obstacle">📦</div>
+<div id="coinPickup">🪙</div>
+<div id="ground"></div>
+</div>
+
+<script>
+const chicken=document.getElementById("chicken");
+const cat=document.getElementById("cat");
+const obstacle=document.getElementById("obstacle");
+const coinPickup=document.getElementById("coinPickup");
+const scoreText=document.getElementById("score");
+const bestText=document.getElementById("best");
+const distanceText=document.getElementById("distance");
+const message=document.getElementById("message");
+const game=document.getElementById("game");
+const weather=document.getElementById("weather");
+const weatherText=document.getElementById("weatherText");
+const ground=document.getElementById("ground");
+
+const obstacles=[
+    "📦",
+    "🪨",
+    "📦📦",
+    "🧱",
+    "🪵"
+];
+let obstacleType=0;
+let coinX=-120, coinActive=false, obstaclesPassed=0, nextCoinAfter=2;
+const startButton=document.getElementById("startGame");
+const showCharacters=document.getElementById("showCharacters");
+const closeCharacters=document.getElementById("closeCharacters");
+const charactersPanel=document.getElementById("charactersPanel");
+const menu=document.getElementById("menu");
+const coinsText=document.getElementById("coins");
+const missionStatus=document.getElementById("missionStatus");
+const rewardToast=document.getElementById("rewardToast");
+const rewardBoxes=document.querySelectorAll(".rewardBox");
+
+// صداهای بازی با Web Audio ساخته می‌شوند و به فایل صوتی جدا نیاز ندارند.
+let audioCtx=null;
+function getAudio(){
+    if(!audioCtx){
+        const AC=window.AudioContext||window.webkitAudioContext;
+        if(AC) audioCtx=new AC();
+    }
+    if(audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+}
+
+function playJumpSound(){
+    const ctx=getAudio();
+    if(!ctx)return;
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.type="square";
+    osc.frequency.setValueAtTime(520,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(820,ctx.currentTime+0.10);
+    gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.12,ctx.currentTime+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.12);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime+0.13);
+}
+
+function playMilestoneSound(){
+    const ctx=getAudio();
+    if(!ctx)return;
+    [523,659,784,1047].forEach((freq,i)=>{
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        const t=ctx.currentTime+i*0.09;
+        osc.type="triangle";
+        osc.frequency.setValueAtTime(freq,t);
+        gain.gain.setValueAtTime(0.0001,t);
+        gain.gain.exponentialRampToValueAtTime(0.12,t+0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t); osc.stop(t+0.13);
+    });
+}
+
+function showMilestone(){
+    const burst=document.createElement("div");
+    burst.className="scoreBurst";
+    burst.textContent="🎉 +"+score+" 🎉";
+    game.appendChild(burst);
+    setTimeout(()=>burst.remove(),850);
+    playMilestoneSound();
+}
+
+function playGameOverSound(){
+    const ctx=getAudio();
+    if(!ctx)return;
+    [330,247,196].forEach((freq,i)=>{
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        const t=ctx.currentTime+i*0.22;
+        osc.type="square";
+        osc.frequency.setValueAtTime(freq,t);
+        gain.gain.setValueAtTime(0.0001,t);
+        gain.gain.exponentialRampToValueAtTime(0.13,t+0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t); osc.stop(t+0.19);
+    });
+}
+const shopMsg=document.getElementById("shopMsg");
+const characterButtons=document.querySelectorAll(".character");
+
+let coins=Number(localStorage.getItem("coins"))||0;
+let selectedCharacter=localStorage.getItem("selectedCharacter")||"chicken";
+const ownedCharacters=JSON.parse(localStorage.getItem("ownedCharacters")||'["chicken"]');
+
+const MISSION_COOLDOWN=24*60*60*1000;
+let missionState=JSON.parse(localStorage.getItem("dailyMissions")||'null');
+function newMissionState(){return {games:0,claimed:{"3":false,"4":false,"6a":false,"6b":false},resetAt:0};}
+if(!missionState) missionState=newMissionState();
+if(!missionState.claimed) missionState.claimed={"3":false,"4":false,"6a":false,"6b":false};
+if(!missionState.resetAt) missionState.resetAt=Object.values(missionState.claimed).every(Boolean)?Date.now()+MISSION_COOLDOWN:0;
+function saveMissions(){localStorage.setItem("dailyMissions",JSON.stringify(missionState));}
+function updateMissions(){
+    const remaining=Math.max(0,(missionState.resetAt||0)-Date.now());
+    if(remaining>0){
+        const h=Math.floor(remaining/3600000);
+        const m=Math.floor((remaining%3600000)/60000);
+        const sec=Math.floor((remaining%60000)/1000);
+        missionStatus.textContent="همه جعبه‌ها گرفته شد 🎉 | تمدید در "+h+":"+String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0");
+    }else{
+        missionStatus.textContent="امروز "+missionState.games+" بازی انجام داده‌ای";
+    }
+    rewardBoxes.forEach(box=>{
+        const id=box.dataset.mission;
+        const need=id.startsWith("6")?6:Number(id);
+        const claimed=!!missionState.claimed[id];
+        box.classList.toggle("locked",missionState.games<need && !claimed);
+        box.classList.toggle("claimed",claimed);
+        box.textContent=claimed?"✓":"🎁";
+    });
+}
+function missionGameCompleted(){
+    if(missionState.resetAt && Date.now()>=missionState.resetAt) missionState=newMissionState();
+    missionState.games++;
+    saveMissions();
+    updateMissions();
+}
+function claimReward(box){
+    const id=box.dataset.mission;
+    if(missionState.claimed[id]) return;
+    const need=id.startsWith("6")?6:Number(id);
+    if(missionState.games<need) return;
+    missionState.claimed[id]=true;
+    const reward=1+Math.floor(Math.random()*3);
+    coins+=reward;
+    const allClaimed=Object.values(missionState.claimed).every(Boolean);
+    if(allClaimed) missionState.resetAt=Date.now()+MISSION_COOLDOWN;
+    saveMissions(); saveShop(); updateMissions(); updateMenu();
+    rewardToast.textContent="🪙 +"+reward+" سکه";
+    rewardToast.classList.remove("show");
+    void rewardToast.offsetWidth;
+    rewardToast.classList.add("show");
+}
+rewardBoxes.forEach(box=>box.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();claimReward(box);}));
+updateMissions();
+setInterval(()=>{
+    if(missionState.resetAt && Date.now()>=missionState.resetAt){
+        missionState=newMissionState();
+        saveMissions();
+        updateMissions();
+    }else if(missionState.resetAt){
+        updateMissions();
+    }
+},1000);
+
+const characterData={
+    chicken:{emoji:"🐥",name:"جوجه"},
+    mouse:{emoji:"🐭",name:"موش",price:5},
+    squirrel:{emoji:"🐿️",name:"سنجاب",price:10},
+    fox:{emoji:"🦊",name:"روباه",price:15},
+    panda:{emoji:"🐼",name:"پاندا",price:25},
+    lion:{emoji:"🦁",name:"شیر",price:40},
+    penguin:{emoji:"🐧",name:"پنگوئن",price:60},
+    dragon:{emoji:"🐲",name:"اژدها",price:100}
+};
+
+function saveShop(){
+    localStorage.setItem("coins",coins);
+    localStorage.setItem("selectedCharacter",selectedCharacter);
+    localStorage.setItem("ownedCharacters",JSON.stringify(ownedCharacters));
+}
+
+function updateMenu(){
+    coinsText.textContent="🪙 سکه: "+coins;
+    characterButtons.forEach(btn=>{
+        const id=btn.dataset.character;
+        const data=characterData[id];
+        const owned=ownedCharacters.includes(id);
+        btn.classList.toggle("selected",id===selectedCharacter);
+        btn.classList.toggle("locked",!owned);
+        if(owned){
+            btn.innerHTML='<span class="emoji">'+data.emoji+'</span>'+data.name+'<br>خریده شده';
+        }else{
+            btn.innerHTML='<span class="emoji">'+data.emoji+'</span>'+data.name+'<br>🪙 '+data.price+' سکه';
+        }
+    });
+}
+
+characterButtons.forEach(btn=>{
+    btn.addEventListener("click",()=>{
+        const id=btn.dataset.character;
+        const data=characterData[id];
+
+        if(ownedCharacters.includes(id)){
+            selectedCharacter=id;
+            shopMsg.textContent="شخصیت "+data.name+" انتخاب شد.";
+        }else if(coins>=data.price){
+            coins-=data.price;
+            ownedCharacters.push(id);
+            selectedCharacter=id;
+            shopMsg.textContent="🎉 "+data.name+" رو خریدی!";
+            saveShop();
+        }else{
+            shopMsg.textContent="❌ سکه کافی نداری!";
+        }
+        updateMenu();
+    });
+});
+
+updateMenu();
+
+let gameRunning=false,jumping=false;
+let obstacleX=950,score=0,speed=3.5,catX=20;
+let catJumpY=0,catJumpVelocity=0,catJumping=false,catJumpTimer=0;
+let lastChickenJump=false;
+let bestScore=Number(localStorage.getItem("bestScore"))||0;
+let weatherIndex=0;
+let weatherProgress=0;
+let lastWeatherChange=performance.now();
+const weathers=[
+    {name:"☀️ آفتابی",bg:"linear-gradient(#55c9ff,#eafaff)",ground:"#72b447",particles:[]},
+    {name:"☁️ ابری",bg:"linear-gradient(#9aa9b8,#d9e1e7)",ground:"#6d9b55",particles:["☁️"]},
+    {name:"🌧️ بارانی",bg:"linear-gradient(#516b83,#a9c1d1)",ground:"#557d4c",particles:["💧","💧","💧","💧","💧"]},
+    {name:"❄️ برفی",bg:"linear-gradient(#b9d5e8,#f7fbff)",ground:"#7fa06f",particles:["❄️","❄️","❄️","❄️"]},
+    {name:"🌅 غروب",bg:"linear-gradient(#ff9a62,#6d5b9b)",ground:"#4e6b42",particles:["✨"]},
+    {name:"⛈️ طوفانی",bg:"linear-gradient(#26364b,#71849a)",ground:"#496342",particles:["💧","💧","⚡","💧"]}
+];
+
+setWeather(0);
+
+function setWeather(index){
+    weatherIndex=index%weathers.length;
+    const w=weathers[weatherIndex];
+    game.style.background=w.bg;
+    ground.style.background=w.ground;
+    weather.innerHTML="";
+    const rainMode=(weatherIndex===2 || weatherIndex===5);
+    const count=rainMode ? 32 : w.particles.length;
+    for(let i=0;i<count;i++){
+        const el=document.createElement("span");
+        if(rainMode){
+            el.className="rainDrop";
+        }else{
+            el.className="weatherParticle";
+            el.textContent=w.particles[i];
+        }
+        el.style.left=(2+Math.random()*96)+"%";
+        el.style.top=(-20-Math.random()*100)+"px";
+        el.style.animationDuration=(rainMode ? 1.1+Math.random()*1.2 : 2.5+Math.random()*3)+"s";
+        el.style.animationDelay=(-Math.random()*3)+"s";
+        weather.appendChild(el);
+    }
+    weatherText.textContent=w.name;
+    weatherText.style.opacity=".75";
+}
+
+function updateWeather(){
+    if(!gameRunning)return;
+    const now=performance.now();
+    // هر 10 ثانیه هوا یک مرحله عوض می‌شود؛ تغییر پس‌زمینه با CSS تدریجی است.
+    if(now-lastWeatherChange>=10000){
+        lastWeatherChange=now;
+        weatherIndex=(weatherIndex+1)%weathers.length;
+        setWeather(weatherIndex);
+    }
+}
+bestText.textContent="رکورد: "+bestScore;
+
+function jump(){
+    if(jumping||!gameRunning)return;
+
+    playJumpSound();
+    jumping=true;
+    lastChickenJump=true;
+
+    // گربه هم‌زمان با جوجه می‌پرد
+    catJumping=true;
+    catJumpY=0;
+    catJumpVelocity=10.5;
+
+    let height=0;
+
+    const up=setInterval(()=>{
+        height+=8;
+        chicken.style.bottom=(55+height)+"px";
+
+        if(height>=150){
+            clearInterval(up);
+
+            const down=setInterval(()=>{
+                height-=8;
+                chicken.style.bottom=(55+Math.max(0,height))+"px";
+
+                if(height<=0){
+                    clearInterval(down);
+                    chicken.style.bottom="55px";
+                    jumping=false;
+                    lastChickenJump=false;
+                }
+            },20);
+        }
+    },20);
+}
+
+document.addEventListener("keydown",e=>{
+    if(e.code==="Space"||e.code==="ArrowUp")jump();
+});
+document.addEventListener("touchstart",function(e){
+    if(e.target.closest("#menu")) return;
+    jump();
+},{passive:true});
+
+showCharacters.addEventListener("click",function(e){
+    e.preventDefault(); e.stopPropagation();
+    charactersPanel.style.display="block";
+});
+closeCharacters.addEventListener("click",function(e){
+    e.preventDefault(); e.stopPropagation();
+    charactersPanel.style.display="none";
+});
+
+startButton.addEventListener("click",function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    startGame();
+});
+
+function startGame(){
+    if(gameRunning)return;
+    gameRunning=true;
+    game.classList.add("birdsActive");
+    jumping=false;
+    menu.style.display="none";
+    message.style.display="none";
+    chicken.textContent=characterData[selectedCharacter].emoji;
+    cat.textContent="🐈";
+    score=0;
+    speed=3.5;
+    lastWeatherChange=performance.now();
+    setWeather(weatherIndex);
+    obstacleX=950;
+    coinX=-120;
+    coinActive=false;
+    coinPickup.style.display="none";
+    obstaclesPassed=0;
+    nextCoinAfter=2+Math.floor(Math.random()*2);
+    catX=20;
+    catJumpY=0;
+    catJumpVelocity=0;
+    catJumping=false;
+    catJumpTimer=0;
+    lastChickenJump=false;
+    obstacleType=Math.floor(Math.random()*obstacles.length);
+    obstacle.textContent=obstacles[obstacleType];
+    cat.style.left=catX+"px";
+    cat.style.transform="scaleX(-1) translateY(0)";
+    obstacle.style.left=obstacleX+"px";
+    chicken.style.bottom="55px";
+    scoreText.textContent="امتیاز: 0";
+    message.style.display="none";
+    updateDistance();
+    requestAnimationFrame(gameLoop);
+}
+
+function moveCat(){
+    catX=20;
+    cat.style.left=catX+"px";
+
+    let bob=Math.sin(Date.now()/100)*2;
+
+    if(jumping && !catJumping){
+        catJumping=true;
+        catJumpY=0;
+        catJumpVelocity=10.5;
+    }
+
+    if(catJumping){
+        catJumpY+=catJumpVelocity;
+        catJumpVelocity-=0.58;
+
+        if(catJumpY<=0){
+            catJumpY=0;
+            catJumpVelocity=0;
+            catJumping=false;
+        }
+    }
+
+    cat.style.transform="scaleX(-1) translateY("+(bob-catJumpY)+"px)";
+}
+
+function gameLoop(){
+    if(!gameRunning)return;
+
+    obstacleX-=speed;
+    obstacle.style.left=obstacleX+"px";
+
+    if(coinActive){
+        coinX-=speed;
+        coinPickup.style.left=coinX+"px";
+        if(coinX<-80){
+            coinActive=false;
+            coinPickup.style.display="none";
+        }
+    }
+    updateDistance();
+
+    moveCat();
+    updateWeather();
+
+    if(obstacleX<-170){
+        obstacleX=950;
+        obstacleType=Math.floor(Math.random()*obstacles.length);
+        obstacle.textContent=obstacles[obstacleType];
+        score++;
+        obstaclesPassed++;
+        if(!coinActive && obstaclesPassed>=nextCoinAfter){
+            coinActive=true;
+            coinX=650;
+            coinPickup.style.left=coinX+"px";
+            coinPickup.style.display="block";
+            obstaclesPassed=0;
+            nextCoinAfter=2+Math.floor(Math.random()*2);
+        }
+        scoreText.textContent="امتیاز: "+score;
+        speed=3.5 + score*0.18;
+        if(score>0 && score%10===0) showMilestone();
+    }
+
+    checkCollision();
+    checkCoinCollection();
+    if(!gameRunning)return;
+    requestAnimationFrame(gameLoop);
+}
+
+function updateDistance(){
+    let distance=obstacleX-110;
+    let meters=Math.max(0,Math.floor(distance/10));
+
+    distanceText.textContent="📦 مانع بعدی: "+meters+" متر";
+
+    // نشانگر متر همراه مانع حرکت می‌کند و پشت/بالای آن دیده می‌شود
+}
+
+function checkCollision(){
+    const chickenRect=chicken.getBoundingClientRect();
+    const obstacleRect=obstacle.getBoundingClientRect();
+
+    // فقط قسمت واقعی شکل مانع حساب می‌شود، نه یک کادر ۱۵۰ پیکسلی.
+    const hitX=
+        chickenRect.right-18 > obstacleRect.left+6 &&
+        chickenRect.left+18 < obstacleRect.right-6;
+
+    const hitY=
+        chickenRect.bottom-8 > obstacleRect.top+8 &&
+        chickenRect.top+8 < obstacleRect.bottom-8;
+
+    if(hitX && hitY) gameOver();
+}
+
+
+function checkCoinCollection(){
+    if(!coinActive)return;
+    const chickenRect=chicken.getBoundingClientRect();
+    const coinRect=coinPickup.getBoundingClientRect();
+    const hit=chickenRect.right-12>coinRect.left+7 &&
+              chickenRect.left+12<coinRect.right-7 &&
+              chickenRect.bottom-8>coinRect.top+7 &&
+              chickenRect.top+8<coinRect.bottom-7;
+    if(hit){
+        coinActive=false;
+        coinPickup.style.display="none";
+        coins++;
+        saveShop();
+        updateMenu();
+        rewardToast.textContent="🪙 +1 سکه";
+        rewardToast.classList.remove("show");
+        void rewardToast.offsetWidth;
+        rewardToast.classList.add("show");
+    }
+}
+
+function gameOver(){
+    gameRunning=false;
+    game.classList.remove("birdsActive");
+    playGameOverSound();
+    cat.textContent="😼🫯";
+    missionGameCompleted();
+    saveScore();
+
+    message.innerHTML=
+        "💥 <span style=\"font-size:38px;display:block;\">Game is over</span><br>به مانع خوردی!<br>امتیاز: "+score+
+        "<br><button id='restart'>دوباره بازی کن</button> <button id='backMenu'>منوی اصلی</button>";
+
+    message.style.display="block";
+    document.getElementById("restart").addEventListener("click",startGame);
+    document.getElementById("backMenu").addEventListener("click",showMenu);
+}
+
+function gameOverByCat(){
+    // گربه دیگر باعث باخت نمی‌شود.
+}
+
+function saveScore(){
+    if(score>bestScore){
+        bestScore=score;
+        localStorage.setItem("bestScore",bestScore);
+    }
+
+    // سکه‌های مأموریت و خریدها حفظ می‌شوند؛ رکورد فقط حداقل موجودی قدیمی را نگه می‌دارد.
+    coins=Math.max(coins,bestScore);
+    saveShop();
+    bestText.textContent="رکورد: "+bestScore;
+    updateMenu();
+}
+
+function showMenu(){
+    gameRunning=false;
+    game.classList.remove("birdsActive");
+    message.style.display="none";
+    menu.style.display="flex";
+    updateMenu();
+}
+</script>
+</body>
+</html>
