@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>مسابقه خیابانی</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101820;color:#fff;font-family:Tahoma,Arial,sans-serif;touch-action:none}
+#game{position:relative;width:100%;height:100%;max-width:620px;margin:auto;background:#242b30;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;direction:rtl}
+.pill{background:#101820d9;border:1px solid #ffffff24;border-radius:14px;padding:9px 13px;font-size:14px;font-weight:bold;box-shadow:0 3px 12px #0003}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#071018c9;padding:22px;text-align:center}
+.panel{width:min(100%,360px);padding:26px 22px;border-radius:24px;background:#18232df2;border:1px solid #ffffff22;box-shadow:0 15px 50px #0006}
+h1{font-size:29px;margin:0 0 10px;color:#ffcc45}
+p{line-height:1.9;color:#d3dce4;font-size:14px}
+button{font:inherit;font-weight:bold;border:0;cursor:pointer;touch-action:manipulation}
+.start{background:#ffcc45;color:#17212a;border-radius:14px;padding:14px 25px;width:100%;font-size:17px;margin-top:10px}.secondary{background:#2c4050;color:#fff;border:1px solid #ffffff24;border-radius:14px;padding:12px 18px;width:100%;font-size:15px;margin-top:9px}.shopgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;max-height:44vh;overflow:auto}.caritem{background:#22313d;border:1px solid #ffffff22;border-radius:14px;padding:12px 8px}.carpreview{height:64px;display:flex;align-items:center;justify-content:center;font-size:38px}.caritem button{width:100%;padding:9px 5px;border-radius:10px;background:#ffcc45;color:#17212a;font-size:12px}.caritem button:disabled{background:#52616c;color:#fff}.toprow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.controls{position:absolute;bottom:22px;left:0;right:0;display:flex;justify-content:space-between;padding:0 22px;pointer-events:none;direction:ltr}
+.ctrl{pointer-events:auto;width:72px;height:72px;border-radius:50%;background:#ffffff25;border:2px solid #ffffff90;color:#fff;font-size:30px;backdrop-filter:blur(4px);box-shadow:0 5px 16px #0003}
+.ctrl:active{background:#ffcc4577;transform:scale(.96)}
+.hidden{display:none}
+.small{font-size:12px;color:#9eabb6;margin-top:12px}
+</style>
+</head>
+<body>
+<div id="game">
+<canvas id="c"></canvas>
+<div class="hud"><div class="pill">🏁 امتیاز: <span id="score">۰</span></div><div class="pill">🏆 رکورد: <span id="best">۰</span></div></div>
+<div class="overlay" id="menu"><div class="panel"><h1>🏎️ مسابقه خیابانی</h1><p>از بالا رانندگی کن، از ماشین‌ها جاخالی بده و تا می‌تونی امتیاز جمع کن!</p><p>با کلیدهای ← و → یا دکمه‌های پایین صفحه حرکت کن.</p><div class="pill" style="display:inline-block;margin:5px 0 10px">🪙 سکه‌ها: <span id="coins">۰</span></div><button class="start" id="start">شروع مسابقه</button><button class="secondary" id="openShop">🚘 فروشگاه ماشین‌ها</button><div class="small" id="chosenCar">ماشین انتخاب‌شده: آبی اسپرت</div><div class="small">برای گوشی و کامپیوتر</div></div></div>
+<div class="overlay hidden" id="over"><div class="panel"><h1>💥 تصادف کردی!</h1><p>امتیازت: <b id="final">۰</b></p><button class="start" id="again">دوباره بازی کن</button><button class="secondary" id="backMenu">🏠 بازگشت به منو</button></div></div>
+<div class="overlay hidden" id="shop"><div class="panel"><div class="toprow"><h1 style="font-size:24px">🚘 فروشگاه</h1><div class="pill">🪙 <span id="shopCoins">۰</span></div></div><p>ماشین دلخواهت رو بخر و برای مسابقه انتخاب کن.</p><div class="shopgrid" id="shopGrid"></div><button class="secondary" id="closeShop">برگشت به منو</button></div></div>
+<div class="controls"><button class="ctrl" id="left" aria-label="چپ">◀</button><button class="ctrl" id="right" aria-label="راست">▶</button></div>
+</div>
+<script>
+(()=> {
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+const game=document.getElementById('game');
+const scoreEl=document.getElementById('score'),bestEl=document.getElementById('best');
+const menu=document.getElementById('menu'),over=document.getElementById('over');
+let W=0,H=0,dpr=1,roadX=0,roadW=0,player,traffic=[],lines=[],score=0,best=0,speed=5,playing=false,last=0,spawn=0,keys={left:false,right:false};
+const cars=[{id:'blue',name:'آبی اسپرت',emoji:'🏎️',color:'#17a8d8',price:0,shape:0},{id:'red',name:'قرمز توربو',emoji:'🚗',color:'#f04444',price:35,shape:1},{id:'yellow',name:'زرد کلاسیک',emoji:'🚕',color:'#f2bd3f',price:60,shape:2},{id:'purple',name:'بنفش سوپر',emoji:'🏎️',color:'#a66af0',price:100,shape:3},{id:'green',name:'سبز مسابقه‌ای',emoji:'🚙',color:'#45c878',price:150,shape:4},{id:'white',name:'سفید لوکس',emoji:'🚘',color:'#f1f1f1',price:220,shape:5}];
+let coins=0,owned=['blue'],selected='blue';
+try{coins=Number(localStorage.getItem('topdownCoins')||0);owned=JSON.parse(localStorage.getItem('topdownOwned')||'["blue"]');selected=localStorage.getItem('topdownSelected')||'blue';if(!owned.includes('blue'))owned.unshift('blue');if(!owned.includes(selected))selected='blue'}catch(e){}
+const coinsEl=document.getElementById('coins'),shopCoinsEl=document.getElementById('shopCoins'),shop=document.getElementById('shop'),shopGrid=document.getElementById('shopGrid');
+const selectedCar=()=>cars.find(c=>c.id===selected)||cars[0];
+const fa=n=>Math.floor(n).toLocaleString('fa-IR');
+function updateCoins(){coinsEl.textContent=fa(coins);shopCoinsEl.textContent=fa(coins);try{localStorage.setItem('topdownCoins',coins);localStorage.setItem('topdownOwned',JSON.stringify(owned));localStorage.setItem('topdownSelected',selected)}catch(e){}document.getElementById('chosenCar').textContent='ماشین انتخاب‌شده: '+selectedCar().name}
+function renderShop(){shopGrid.innerHTML='';cars.forEach(c=>{const own=owned.includes(c.id),sel=selected===c.id;const item=document.createElement('div');item.className='caritem';item.innerHTML='<div class="carpreview" style="color:'+c.color+'">'+c.emoji+'</div><b>'+c.name+'</b><p style="font-size:12px;margin:6px 0 10px">'+(c.price===0?'رایگان':'🪙 '+fa(c.price))+'</p><button '+(!own&&coins<c.price?'disabled':'')+'>'+ (sel?'انتخاب شده':own?'انتخاب':'خرید') +'</button>';item.querySelector('button').onclick=()=>{if(own){selected=c.id}else if(coins>=c.price){coins-=c.price;owned.push(c.id);selected=c.id}else{return}updateCoins();renderShop()};shopGrid.appendChild(item)})}
+updateCoins();
+try{best=Number(localStorage.getItem('topdownBest')||0)}catch(e){}
+bestEl.textContent=fa(best);
+function resize(){const r=game.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);roadW=Math.min(W*.78,390);roadX=(W-roadW)/2;player={x:W/2,y:H*.76,w:W<380?34:40,h:66};lines=Array.from({length:8},(_,i)=>i*100)}
+function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
+function car(x,y,w,h,color,isPlayer=false,shape=0){
+  rounded(x-w/2+3,y-h/2+5,w,h,9,'#0005');
+  if(shape===1){ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(x,y-h/2);ctx.lineTo(x+w/2,y-h*.28);ctx.lineTo(x+w*.43,y+h*.38);ctx.lineTo(x,y+h/2);ctx.lineTo(x-w*.43,y+h*.38);ctx.lineTo(x-w/2,y-h*.28);ctx.closePath();ctx.fill()}
+  else if(shape===2){rounded(x-w*.53,y-h/2,w*1.06,h,5,color);rounded(x-w*.39,y-h*.20,w*.78,h*.36,3,'#c9e6ee')}
+  else if(shape===3){rounded(x-w*.43,y-h/2,w*.86,h,15,color);rounded(x-w*.30,y-h*.28,w*.60,h*.34,9,'#bfeaff')}
+  else if(shape===4){rounded(x-w*.47,y-h/2,w*.94,h,4,color);rounded(x-w*.34,y-h*.24,w*.68,h*.33,3,'#c9e6ee');rounded(x-w*.34,y+h*.12,w*.68,h*.18,3,'#344653')}
+  else if(shape===5){rounded(x-w*.48,y-h/2,w*.96,h,12,color);rounded(x-w*.35,y-h*.30,w*.70,h*.38,7,'#c9e6ee');rounded(x-w*.32,y+h*.13,w*.64,h*.23,6,'#344653')}
+  else {rounded(x-w/2,y-h/2,w,h,9,color);rounded(x-w*.34,y-h*.30,w*.68,h*.37,5,isPlayer?'#bfeaff':'#c9e6ee');rounded(x-w*.30,y+h*.12,w*.60,h*.22,4,isPlayer?'#276b87':'#344653')}
+  if(isPlayer&&shape===2){rounded(x-w*.18,y-h*.45,w*.36,h*.09,3,'#fff2b4')}
+  rounded(x-w*.43,y-h*.39,w*.18,h*.10,2,'#fff2b4');rounded(x+w*.25,y-h*.39,w*.18,h*.10,2,'#fff2b4');rounded(x-w*.43,y+h*.30,w*.18,h*.10,2,'#ff4c4c');rounded(x+w*.25,y+h*.30,w*.18,h*.10,2,'#ff4c4c');
+  rounded(x-w*.55,y-h*.27,w*.12,h*.22,2,'#111820');rounded(x+w*.43,y-h*.27,w*.12,h*.22,2,'#111820');rounded(x-w*.55,y+h*.13,w*.12,h*.22,2,'#111820');rounded(x+w*.43,y+h*.13,w*.12,h*.22,2,'#111820');
+}
+function drawRoad(dt){
+ ctx.fillStyle='#247044';ctx.fillRect(0,0,W,H);
+ // roadside grass details
+ for(let y=-20;y<H+20;y+=42){let yy=(y+(performance.now()*.05)%42);ctx.fillStyle='#2d8050';ctx.fillRect(roadX-22,yy,7,18);ctx.fillRect(roadX+roadW+15,yy+12,7,18)}
+ ctx.fillStyle='#30363c';ctx.fillRect(roadX,0,roadW,H);
+ ctx.fillStyle='#d7dadd';ctx.fillRect(roadX+5,0,4,H);ctx.fillRect(roadX+roadW-9,0,4,H);
+ ctx.fillStyle='#e9d99b';ctx.fillRect(roadX+13,0,2,H);ctx.fillRect(roadX+roadW-15,0,2,H);
+ ctx.fillStyle='#e9edf0';
+ for(let i=1;i<3;i++){let x=roadX+roadW*i/3;for(let y=-100;y<H+100;y+=100){let yy=(y+(performance.now()*speed*.05)%100);ctx.fillRect(x-2,yy,4,47)}}
+}
+function spawnCar(){let lanes=[roadX+roadW/6,roadX+roadW/2,roadX+roadW*5/6];let lane=Math.floor(Math.random()*3);let colors=['#ed5a43','#4d8dff','#f2bd3f','#b36de3','#f1f1f1'];traffic.push({x:lanes[lane],y:-80,w:W<380?33:39,h:62,color:colors[Math.floor(Math.random()*colors.length)],extra:Math.random()*1.5})}
+function start(){score=0;speed=5;traffic=[];spawn=0;player.x=W/2;playing=true;last=performance.now();menu.classList.add('hidden');over.classList.add('hidden');requestAnimationFrame(loop)}
+function end(){playing=false;over.classList.remove('hidden');document.getElementById('final').textContent=fa(score);if(score>best){best=score;bestEl.textContent=fa(best);try{localStorage.setItem('topdownBest',best)}catch(e){}}const earned=Math.floor(score/10);coins+=earned;updateCoins();const f=document.getElementById('final');f.textContent=fa(score)+' — جایزه: 🪙 '+fa(earned)+' سکه';}
+function loop(now){if(!playing)return;let dt=Math.min((now-last)/16.67,2);last=now;speed=Math.min(11,5+score/180);score+=dt;scoreEl.textContent=fa(score);
+ if(keys.left)player.x-=5.2*dt;if(keys.right)player.x+=5.2*dt;
+ player.x=Math.max(roadX+player.w/2+15,Math.min(roadX+roadW-player.w/2-15,player.x));
+ spawn+=dt;if(spawn>Math.max(26,62-score/15)){spawn=0;spawnCar()}
+ drawRoad(dt);
+ for(let i=traffic.length-1;i>=0;i--){let t=traffic[i];t.y+=(speed+t.extra)*dt;car(t.x,t.y,t.w,t.h,t.color,false,0);
+ if(Math.abs(t.x-player.x)<(t.w+player.w)*.39&&Math.abs(t.y-player.y)<(t.h+player.h)*.39){end();return}
+ if(t.y>H+100)traffic.splice(i,1)}
+ car(player.x,player.y,player.w,player.h,selectedCar().color,true,selectedCar().shape);
+ // slight speed streaks
+ requestAnimationFrame(loop)}
+function setKey(k,v){keys[k]=v}
+document.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','a','d','A','D'].includes(e.key))e.preventDefault();if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setKey('left',true);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setKey('right',true);if(e.key==='Enter'&&!playing)start()});
+document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setKey('left',false);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setKey('right',false)});
+function bind(id,k){let b=document.getElementById(id);b.addEventListener('pointerdown',e=>{e.preventDefault();setKey(k,true);b.setPointerCapture?.(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,e=>{setKey(k,false)}))}
+bind('left','left');bind('right','right');
+document.getElementById('start').onclick=start;document.getElementById('again').onclick=start;document.getElementById('backMenu').onclick=()=>{over.classList.add('hidden');menu.classList.remove('hidden');updateCoins()};document.getElementById('openShop').onclick=()=>{menu.classList.add('hidden');shop.classList.remove('hidden');renderShop();updateCoins()};document.getElementById('closeShop').onclick=()=>{shop.classList.add('hidden');menu.classList.remove('hidden');updateCoins()};
+window.addEventListener('resize',resize);resize();
+})();
+</script>
+</body></html>
